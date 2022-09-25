@@ -57,7 +57,7 @@ size_t data_callback(char *buffer, size_t item_size, size_t item_ct, void *ignor
     printf("%3d: ", line_ct++);
 
     /* Print the received chunk one byte at a time. */
-    for (char *p = buffer; p < &buffer[byte_ct - 1]; ++p) {
+    for (char *p = buffer; p < &buffer[byte_ct]; ++p) {
         if (*p != '\n') {
             putchar(*p);
         } else {
