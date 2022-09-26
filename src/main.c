@@ -4,13 +4,18 @@
     A tiny client to demonstrate using libcurl to handle basic HTTP requests in C.
 */
 #include <curl/curl.h>
+#include <json-c/json.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #define MOONCLI_URI "https://shrewdly.herokuapp.com/"
 #define MOONCLI_UA "mooncli (libcurl/7.85.0)"
+#define MOONCLI_MAX_DESC_LEN 256
+#define MOONCLI_MAX_NAME_LEN 256
+#define MOONCLI_MAX_BUFFER 4096
 
 static int line_ct;
+static char json_buffer[MOONCLI_MAX_BUFFER];
 static CURL *curl;
 
 size_t data_callback(char *buffer, size_t item_size, size_t item_ct, void *ignoreme);
@@ -23,6 +28,18 @@ int main(void) {
     curl = curl_easy_init();
     CURLcode res;
     line_ct = 1;
+
+    struct json_object *parsed_json;
+    struct json_object *json_data;
+    struct json_object *json_metadata;
+    struct json_object *json_message;
+    struct json_object *json_description;
+    struct json_object *json_name;
+
+    struct Message {
+        char description[MOONCLI_MAX_DESC_LEN];
+        char name[MOONCLI_MAX_NAME_LEN];
+    } message;
 
     curl_easy_setopt(curl, CURLOPT_URL, MOONCLI_URI);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, MOONCLI_UA);
