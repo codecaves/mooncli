@@ -3,11 +3,14 @@
 
     A tiny client to demonstrate using libcurl to handle basic HTTP requests in C.
 */
+#include <stdbool.h>
 #include <curl/curl.h>
 #include <json-c/json.h>
+#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 
 #define MOONCLI_URI "https://shrewdly.herokuapp.com/"
 #define MOONCLI_UA "mooncli (libcurl/7.85.0)"
@@ -21,11 +24,14 @@ static CURL *curl;
 
 size_t data_callback(char *buffer, size_t item_size, size_t item_ct, void *ignoreme);
 size_t header_callback(char *buffer, size_t item_size, size_t item_ct, void *ignoreme);
+bool is_moon(wchar_t *ch);
 void print_http_status(CURL *curl);
 void request_failure(CURLcode *res);
 void json_pp(void);
 
 int main(void) {
+
+    setlocale(LC_ALL, "");
 
     curl = curl_easy_init();
     CURLcode res;
@@ -68,6 +74,9 @@ size_t data_callback(char *buffer, size_t item_size, size_t item_ct, void *ignor
     for (char *p = buffer, *q = json_buffer; p < &buffer[byte_ct]; ++p) {
         if (*p != '\n') {
             //putchar(*p);
+            if (is_moon((wchar_t *) p) == true) {
+                /* do nothing because this doesn't work */
+            }
             if (q < &json_buffer[MOONCLI_MAX_BUFFER]) {
                 *q = *p;
                 q++;
@@ -83,6 +92,29 @@ size_t data_callback(char *buffer, size_t item_size, size_t item_ct, void *ignor
     //printf("\n\n");
     json_pp();
     return byte_ct;
+}
+
+/* TODO: fixme */
+bool is_moon(wchar_t *ch) {
+    bool ret_val = false;
+    if (wcscmp(ch, L"🌑") == 0) {
+        ret_val = true;
+    } else if (wcscmp(ch, L"🌒") == 0) {
+        ret_val = true;
+    } else if (wcscmp(ch, L"🌓") == 0) {
+        ret_val = true;
+    } else if (wcscmp(ch, L"🌔") == 0) {
+        ret_val = true;
+    } else if (wcscmp(ch, L"🌕") == 0) {
+        ret_val = true;
+    } else if (wcscmp(ch, L"🌖") == 0) {
+        ret_val = true;
+    } else if (wcscmp(ch, L"🌗") == 0) {
+        ret_val = true;
+    } else if (wcscmp(ch, L"🌘") == 0) {
+        ret_val = true;
+    }
+    return ret_val;
 }
 
 size_t header_callback(char *buffer, size_t item_size, size_t item_ct, void *ignoreme) {
