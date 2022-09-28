@@ -6,16 +6,15 @@
 #include <stdbool.h>
 #include <curl/curl.h>
 #include <json-c/json.h>
-#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <wchar.h>
 
 #define MOONCLI_URI "https://shrewdly.herokuapp.com/"
 #define MOONCLI_UA "mooncli (libcurl/7.85.0)"
 #define MOONCLI_MAX_DESC_LEN 256
 #define MOONCLI_MAX_NAME_LEN 256
+#define MOONCLI_MAX_DATE_LEN 256
 #define MOONCLI_MAX_BUFFER 4096
 
 static int line_ct;
@@ -24,14 +23,11 @@ static CURL *curl;
 
 size_t data_callback(char *buffer, size_t item_size, size_t item_ct, void *ignoreme);
 size_t header_callback(char *buffer, size_t item_size, size_t item_ct, void *ignoreme);
-bool is_moon(wchar_t *ch);
 void print_http_status(CURL *curl);
 void request_failure(CURLcode *res);
 void json_pp(void);
 
 int main(void) {
-
-    setlocale(LC_ALL, "");
 
     curl = curl_easy_init();
     CURLcode res;
@@ -46,14 +42,12 @@ int main(void) {
         fprintf(stderr, "[!] Failed to initialize curllib.");
         return EXIT_FAILURE;
     } else {
-
         res = curl_easy_perform(curl);
 
         if (res != CURLE_OK) {
             request_failure(&res);
         }
         curl_easy_cleanup(curl);
-
     }
 
     return EXIT_SUCCESS;
@@ -66,55 +60,17 @@ size_t data_callback(char *buffer, size_t item_size, size_t item_ct, void *ignor
     size_t byte_ct = item_size * item_ct;
 
     print_http_status(curl);
-    /* DEBUG PRINTS */
-    //printf("[+] Chunk received: (%zu bytes)\n", byte_ct);
-    //printf("%3d: ", line_ct++);
 
-    /* Print the received chunk one byte at a time. */
+    /* Store each byte in the json_buffer */
     for (char *p = buffer, *q = json_buffer; p < &buffer[byte_ct]; ++p) {
-        if (*p != '\n') {
-            //putchar(*p);
-            if (is_moon((wchar_t *) p) == true) {
-                /* do nothing because this doesn't work */
-            }
-            if (q < &json_buffer[MOONCLI_MAX_BUFFER]) {
-                *q = *p;
-                q++;
-            }
-        } else {
-            /* DEBUG PRINTS */
-            //putchar(*p);
-            //printf("%3d: ", line_ct);
-            ++line_ct;
+        if ((*p != '\n') && (q < &json_buffer[MOONCLI_MAX_BUFFER])) {
+            *q = *p;
+            q++;
         }
     }
 
-    //printf("\n\n");
     json_pp();
     return byte_ct;
-}
-
-/* TODO: fixme */
-bool is_moon(wchar_t *ch) {
-    bool ret_val = false;
-    if (wcscmp(ch, L"🌑") == 0) {
-        ret_val = true;
-    } else if (wcscmp(ch, L"🌒") == 0) {
-        ret_val = true;
-    } else if (wcscmp(ch, L"🌓") == 0) {
-        ret_val = true;
-    } else if (wcscmp(ch, L"🌔") == 0) {
-        ret_val = true;
-    } else if (wcscmp(ch, L"🌕") == 0) {
-        ret_val = true;
-    } else if (wcscmp(ch, L"🌖") == 0) {
-        ret_val = true;
-    } else if (wcscmp(ch, L"🌗") == 0) {
-        ret_val = true;
-    } else if (wcscmp(ch, L"🌘") == 0) {
-        ret_val = true;
-    }
-    return ret_val;
 }
 
 size_t header_callback(char *buffer, size_t item_size, size_t item_ct, void *ignoreme) {
@@ -158,11 +114,13 @@ void json_pp(void) {
     struct json_object *json_message;
     struct json_object *json_description;
     struct json_object *json_name;
+    struct json_object *json_date;
 
-    struct Message {
+    struct MoonData {
         char description[MOONCLI_MAX_DESC_LEN];
         char name[MOONCLI_MAX_NAME_LEN];
-    } message;
+        char date[MOONCLI_MAX_DATE_LEN];
+    } moondata;
 
     parsed_json = json_tokener_parse(json_buffer);
     json_object_object_get_ex(parsed_json, "data", &json_data);
@@ -170,10 +128,13 @@ void json_pp(void) {
     json_object_object_get_ex(json_data, "message", &json_message);
     json_object_object_get_ex(json_message, "description", &json_description);
     json_object_object_get_ex(json_message, "name", &json_name);
+    json_object_object_get_ex(json_metadata, "date", &json_date);
 
-    strncpy(message.description, json_object_get_string(json_description), MOONCLI_MAX_DESC_LEN);
-    strncpy(message.name, json_object_get_string(json_name), MOONCLI_MAX_NAME_LEN);
+    strncpy(moondata.description, json_object_get_string(json_description), MOONCLI_MAX_DESC_LEN);
+    strncpy(moondata.name, json_object_get_string(json_name), MOONCLI_MAX_NAME_LEN);
+    strncpy(moondata.date, json_object_get_string(json_date), MOONCLI_MAX_DATE_LEN);
 
-    printf("Name: %s\n", message.name);
-    printf("Description: %s\n", message.description);
+    printf("Date: %s\n", moondata.date);
+    printf("Name: %s\n", moondata.name);
+    printf("Description: %s\n", moondata.description);
 }
